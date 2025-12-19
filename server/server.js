@@ -3,7 +3,9 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const path = require("path");
 require("dotenv").config();
+
 
 
 
@@ -12,8 +14,12 @@ const connectDB = require("./Config/db");
 const userRoutes = require("./Routes/userroutes");
 const authRoutes = require("./Routes/authroutes");
 const review = require("./Routes/Reviewroute")
+const imageRoutes = require("./Routes/imageRoutes");
 
 const app = express();
+
+// Serve static files
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 
 // ================== MIDDLEWARE ==================
@@ -47,13 +53,14 @@ app.use(
 
 // Root route
 app.get("/", (req, res) => {
-  res.send("🚀 Single Tea India Backend is live!");
+  res.send("🚀 Core talents Backend is live!");
 });
 
 // ================== ROUTES ==================
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/review",review)
+app.use("/api/gallery", imageRoutes);
 
 // ================== START SERVER ==================
 connectDB();

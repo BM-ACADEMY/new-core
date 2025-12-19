@@ -5,7 +5,7 @@ import MissionVision from '@/Components/Homepage/Mission&vissison'
 import ServicesSection from '@/Components/Homepage/Servcies'
 import Section from '@/Components/Homepage/Trustbrand'
 import WhyChooseUs from '@/Components/Homepage/Whycompany'
-import Profilesection from '@/Components/Homepage/Profilesection'
+// import Profilesection from '@/Components/Homepage/Profilesection'
 import TestimonialSlider from '@/Components/Homepage/Testimonials'
 import React from 'react'
 import Gallerysection from '@/Components/Homepage/Gallery'
@@ -21,7 +21,7 @@ const Homeroutes = () => {
       <MissionVision/>
       <CompanyStatusSection/>
       <WhyChooseUs/>
-      <Profilesection/>
+      {/* <Profilesection/> */}
       <TestimonialSlider/>
       <Gallerysection/>
       <Newspapercard/>
