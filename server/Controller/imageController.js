@@ -84,3 +84,51 @@ exports.deleteSingleImage = async (req, res) => {
     res.status(500).json({ message: "Delete failed" });
   }
 };
+
+exports.updateGalleryVisibility = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isPublic } = req.body;
+
+    const gallery = await Image.findByIdAndUpdate(
+      id,
+      { isPublic: isPublic },
+      { new: true } // Return the updated document
+    );
+
+    if (!gallery) {
+      return res.status(404).json({ message: "Gallery not found" });
+    }
+
+    res.status(200).json({ 
+      message: `Gallery is now ${isPublic ? "Visible" : "Hidden"}`, 
+      data: gallery 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error updating visibility" });
+  }
+};
+
+exports.updateTabVisibility = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { showInTabs } = req.body;
+
+    const gallery = await Image.findByIdAndUpdate(
+      id,
+      { showInTabs: showInTabs },
+      { new: true }
+    );
+
+    if (!gallery) return res.status(404).json({ message: "Gallery not found" });
+
+    res.status(200).json({ 
+      message: `Tab is now ${showInTabs ? "Visible" : "Hidden"}`, 
+      data: gallery 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error updating tab visibility" });
+  }
+};

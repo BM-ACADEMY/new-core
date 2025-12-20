@@ -13,7 +13,7 @@ const PublicRoute = ({ children, restrictToLoggedIn = true }) => {
   if (user && restrictToLoggedIn) {
     // If user is logged in, redirect based on role
     if (user.isAdmin) {
-      return <Navigate to="/admin" replace />;
+      return <Navigate to="/admin/gallery" replace />;
     }
     return <Navigate to="/" replace />;
   }

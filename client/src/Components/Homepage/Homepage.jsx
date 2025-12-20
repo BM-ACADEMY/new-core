@@ -1,5 +1,5 @@
-// Homepage.jsx
 import React, { useRef, useEffect, useState } from "react";
+import axiosInstance from "@/api/axiosInstance";
 import {
   motion,
   useMotionValue,
@@ -9,12 +9,11 @@ import {
 
 import Homebannerimage1 from "@/assets/banners/home1.png";
 import HomeBackgroundImage from "@/assets/banners/hero_bg_8.jpg";
-import Slide2Image from "@/assets/banners/ctbanner.jpg"; // your screenshot
-import Slide3Image from "@/assets/banners/officebanner.jpg"; // your screenshot
 
-const SLIDES = [
-  {
-    id: 1,
+const Homepage = () => {
+  // 1. Define the First Slide (Static / Split Layout)
+  const STATIC_FIRST_SLIDE = {
+    id: "static-1",
     type: "split",
     title: (
       <>
@@ -27,40 +26,47 @@ const SLIDES = [
       "350+ successful placements. AI-powered matching. Pay nothing until your hire joins — and thrives.",
     cta: "Brochure",
     image: Homebannerimage1,
-  },
-  {
-    id: 2,
-    type: "full",
-    title: <>Hire First Pay Later</>,
-    description:
-      "Get pre-verified, job-ready professionals delivered within 48 hours — pay only after successful joining.",
-  cta: "Start Hiring Now",
-      image: Slide2Image,
-  },
-  {
-    id: 3,
-    type: "full",
-    title: <>48 Hours to Your Next Hire.</>,
-    description:
-      "AI matches, human-verified professionals — delivered fast. No cost until they start.Trusted by 25+ Tamil Nadu & Pondicherry businesses.",
-    cta: "Start Hiring Now",
-    image: Slide3Image,
-  },
-];
+  };
 
-const Homepage = () => {
+  const [slides, setSlides] = useState([STATIC_FIRST_SLIDE]);
   const [slideIdx, setSlideIdx] = useState(0);
   const controls = useAnimation();
 
-  // Auto-slide every 5 seconds
+  // 2. Fetch Banners from Backend
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSlideIdx((i) => (i + 1) % SLIDES.length);
-    }, 5000);
-    return () => clearInterval(timer);
+    const fetchBanners = async () => {
+      try {
+        const res = await axiosInstance.get("/banners");
+        
+        const backendSlides = res.data.map((banner) => ({
+          id: banner._id,
+          type: "full",
+          title: banner.title,
+          description: banner.subheading,
+          cta: "Start Hiring Now",
+          image: banner.image,
+        }));
+
+        setSlides([STATIC_FIRST_SLIDE, ...backendSlides]);
+      } catch (error) {
+        console.error("Error fetching banners:", error);
+      }
+    };
+
+    fetchBanners();
   }, []);
 
-  // Container variant with stagger, used for BOTH slides
+  // 3. Auto-slide logic
+  useEffect(() => {
+    if (slides.length <= 1) return;
+
+    const timer = setInterval(() => {
+      setSlideIdx((i) => (i + 1) % slides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  // --- ANIMATION VARIANTS ---
   const textContainerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -69,7 +75,6 @@ const Homepage = () => {
     },
   };
 
-  // Item variant, used for all text/button elements
   const textItemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -79,7 +84,7 @@ const Homepage = () => {
     },
   };
 
-  // Tilt effect (only for split slide)
+  // --- TILT EFFECT (For Slide 1) ---
   const imgRef = useRef(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -92,6 +97,7 @@ const Homepage = () => {
     x.set(e.clientX - (rect.left + rect.width / 2));
     y.set(e.clientY - (rect.top + rect.height / 2));
   };
+
   const handleMouseLeave = () => {
     x.set(0);
     y.set(0);
@@ -102,28 +108,28 @@ const Homepage = () => {
     controls.start("visible");
   };
 
-  const current = SLIDES[slideIdx];
+  // Get Current Slide
+  const current = slides[slideIdx];
 
-  // Navigation – only dots (arrows removed)
+  // --- NAVIGATION DOTS ---
   const renderNavigation = () => (
-    <>
-      {/* DOTS */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20">
-        {SLIDES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => goToSlide(i)}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              i === slideIdx ? "bg-[#ffc804] w-8" : "bg-white/60"
-            }`}
-            aria-label={`Go to slide ${i + 1}`}
-          />
-        ))}
-      </div>
-    </>
+    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3 z-20">
+      {slides.map((_, i) => (
+        <button
+          key={i}
+          onClick={() => goToSlide(i)}
+          className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            i === slideIdx ? "bg-[#ffc804] w-8" : "bg-white/60"
+          }`}
+          aria-label={`Go to slide ${i + 1}`}
+        />
+      ))}
+    </div>
   );
 
-  // SLIDE 1: Split Layout
+  // ==========================================
+  // LAYOUT 1: SPLIT (Hardcoded First Slide)
+  // ==========================================
   if (current.type === "split") {
     return (
       <div
@@ -135,11 +141,6 @@ const Homepage = () => {
         <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-purple-500 rounded-full opacity-70 z-0 animate-move-horizontal"></div>
         <div className="absolute bottom-1/4 right-1/2 w-3 h-3 bg-blue-400 rounded-full opacity-70 z-0 animate-move-horizontal"></div>
 
-        {/* --- MODIFIED LINE ---
-            Added h-full (to fill parent height)
-            Added justify-center (to center mobile grid)
-            Added md:justify-start (to reset justification for desktop grid)
-        */}
         <div className="container relative h-full mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-2 gap-12 items-center justify-center md:justify-start z-10">
           {/* LEFT: Text */}
           <motion.div
@@ -176,7 +177,7 @@ const Homepage = () => {
           {/* RIGHT: Tilt Image */}
           <motion.div
             ref={imgRef}
-            className="relative hidden  md:flex items-center justify-center"
+            className="relative hidden md:flex items-center justify-center"
             style={{ perspective: 1000 }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
@@ -186,9 +187,10 @@ const Homepage = () => {
               src={current.image}
               alt="Hero banner"
               className="w-auto h-auto max-h-[75vh]"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              // REMOVED 'scale' here to stop the zoom animation
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
               style={{
                 rotateX,
@@ -205,11 +207,14 @@ const Homepage = () => {
     );
   }
 
-  // SLIDE 2: Full Image Background + Centered Text
+  // ==========================================
+  // LAYOUT 2: FULL (Backend Data Slides)
+  // ==========================================
   return (
     <div
+      // REMOVED 'transition-all duration-1000' to stop background morphing/zooming effects
       className="relative h-[100vh] flex items-center justify-center overflow-hidden bg-cover bg-center"
-      style={{ backgroundImage: `url(${current.image})` }}
+      style={{ backgroundImage: `url(${current.image})` }} 
     >
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/40 z-0"></div>
@@ -217,7 +222,7 @@ const Homepage = () => {
       <div className="container relative mx-auto px-6 z-10 text-center">
         <motion.div
           key={slideIdx}
-          variants={textContainerVariants} // Uses the same stagger as Slide 1
+          variants={textContainerVariants}
           initial="hidden"
           animate="visible"
           className="max-w-4xl mx-auto"
@@ -234,11 +239,6 @@ const Homepage = () => {
             variants={textItemVariants}
           >
             {current.description}
-            {current.trust && (
-              <span className="block mt-3 text-base md:text-lg text-white/80">
-                {current.trust}
-              </span>
-            )}
           </motion.p>
 
           <motion.div

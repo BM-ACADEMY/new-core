@@ -1,72 +1,72 @@
 import React, { useState, useEffect } from 'react';
-import axiosInstance from "@/api/axiosInstance.jsx"; // Ensure this path is correct
+import axiosInstance from "@/api/axiosInstance.jsx";
 import { 
   X, 
   ZoomIn, 
   ChevronLeft, 
   ChevronRight, 
   Image as ImageIcon,
-  Filter,
   Loader2
 } from 'lucide-react';
 
-// --- Sub-Components ---
-
 const ImageCard = ({ url, title, category, onClick }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-
-  return (
-    <div 
-      className="group relative w-full rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-slate-100"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={() => onClick({ url, title, category })}
-    >
-      <div className="aspect-[4/3] overflow-hidden bg-slate-200 relative">
-        {!loaded && (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-400 animate-pulse">
-            <ImageIcon size={32} />
+    const [isHovered, setIsHovered] = useState(false);
+    const [loaded, setLoaded] = useState(false);
+  
+    return (
+      <div 
+        className="group relative w-full rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-slate-100"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={() => onClick({ url, title, category })}
+      >
+        <div className="aspect-[4/3] overflow-hidden bg-slate-200 relative">
+          {!loaded && (
+            <div className="absolute inset-0 flex items-center justify-center text-slate-400 animate-pulse">
+              <ImageIcon size={32} />
+            </div>
+          )}
+          <img
+            src={url} 
+            alt={title}
+            loading="lazy"
+            onLoad={() => setLoaded(true)}
+            className={`h-full w-full object-cover transition-transform duration-700 ${
+              isHovered ? 'scale-110' : 'scale-100'
+            } ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          />
+          <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 flex items-center justify-center ${
+            isHovered ? 'opacity-100' : 'opacity-0'
+          }`}>
+            <ZoomIn className="text-white" size={30} />
           </div>
-        )}
-        <img
-          src={url} 
-          alt={title}
-          loading="lazy"
-          onLoad={() => setLoaded(true)}
-          className={`h-full w-full object-cover transition-transform duration-700 ${
-            isHovered ? 'scale-110' : 'scale-100'
-          } ${loaded ? 'opacity-100' : 'opacity-0'}`}
-        />
-        <div className={`absolute inset-0 bg-black/40 transition-opacity duration-300 flex items-center justify-center ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`}>
-          <ZoomIn className="text-white" size={30} />
+        </div>
+        <div className="p-4">
+          <h3 className="text-sm font-medium text-slate-800 truncate">
+            {title}
+          </h3>
         </div>
       </div>
-      <div className="p-4">
-        <h3 className="text-sm font-medium text-slate-800 truncate">
-          {title}
-        </h3>
-      </div>
-    </div>
-  );
+    );
 };
 
 const GallerySection = () => {
-  const [galleries, setGalleries] = useState([]); // Raw data from backend
+  const [galleries, setGalleries] = useState([]); 
   const [activeCategory, setActiveCategory] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedItem, setSelectedItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const itemsPerPage = 6;
 
-  // 1. Fetch data from backend
   useEffect(() => {
     const fetchGalleries = async () => {
       try {
         const res = await axiosInstance.get("/gallery/all");
-        setGalleries(res.data);
+        
+        // 1. Filter: Only keep galleries that are PUBLIC
+        const publicGalleries = res.data.filter(gallery => gallery.isPublic === true);
+        
+        setGalleries(publicGalleries);
       } catch (err) {
         console.error("Fetch Error:", err);
       } finally {
@@ -76,14 +76,18 @@ const GallerySection = () => {
     fetchGalleries();
   }, []);
 
-  // 2. Generate Dynamic Categories (Tabs) from Gallery Titles
-  const categories = ["All", ...galleries.map(g => g.title)];
+  // 2. Generate Categories
+  const categories = [
+    "All", 
+    ...galleries
+      .filter(g => g.showInTabs === true)
+      .map(g => g.title)
+  ];
 
-  // 3. Process Data: Flatten images to show them individually
+  // 3. Image Logic
   let displayImages = [];
 
   if (activeCategory === "All") {
-    // Combine all images from all galleries into one list
     galleries.forEach(gallery => {
       gallery.imagePaths.forEach(path => {
         displayImages.push({
@@ -95,7 +99,6 @@ const GallerySection = () => {
       });
     });
   } else {
-    // Show only images from the selected gallery title
     const selectedGallery = galleries.find(g => g.title === activeCategory);
     if (selectedGallery) {
       selectedGallery.imagePaths.forEach(path => {
@@ -109,7 +112,6 @@ const GallerySection = () => {
     }
   }
 
-  // 4. Pagination Logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = displayImages.slice(indexOfFirstItem, indexOfLastItem);
@@ -131,19 +133,27 @@ const GallerySection = () => {
       <main className="max-w-7xl mx-auto px-4">
         {/* Dynamic Filter Tabs */}
         <div className="flex flex-wrap justify-center gap-3 mb-12">
-          {categories.map((cat) => (
+          {categories.length > 1 ? (
+            categories.map((cat) => (
             <button
               key={cat}
               onClick={() => { setActiveCategory(cat); setCurrentPage(1); }}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${
                 activeCategory === cat
-                  ? 'bg-slate-900 text-white shadow-lg scale-105'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  ? 'bg-slate-900 text-white border-transparent ring-2 ring-slate-900 ring-offset-2' 
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
               }`}
             >
               {cat}
             </button>
-          ))}
+          ))
+          ) : (
+             categories.length === 1 && galleries.length > 0 ? (
+                <button className="px-6 py-2 rounded-full text-sm font-medium bg-slate-900 text-white border-transparent ring-2 ring-slate-900 ring-offset-2">All</button>
+             ) : (
+                <div className="text-slate-500 italic">No public galleries available.</div>
+             )
+          )}
         </div>
 
         {/* Gallery Grid */}
@@ -160,7 +170,7 @@ const GallerySection = () => {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 text-slate-500">No images found in this category.</div>
+          <div className="text-center py-20 text-slate-500">No images to display.</div>
         )}
 
         {/* Pagination Controls */}
@@ -169,7 +179,7 @@ const GallerySection = () => {
             <button 
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(p => p - 1)}
-              className="p-2 border rounded-md disabled:opacity-30"
+              className="p-2 border rounded-md disabled:opacity-30 hover:bg-slate-50"
             >
               <ChevronLeft />
             </button>
@@ -177,7 +187,7 @@ const GallerySection = () => {
             <button 
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(p => p + 1)}
-              className="p-2 border rounded-md disabled:opacity-30"
+              className="p-2 border rounded-md disabled:opacity-30 hover:bg-slate-50"
             >
               <ChevronRight />
             </button>
@@ -185,11 +195,10 @@ const GallerySection = () => {
         )}
       </main>
 
-      {/* Lightbox Modal */}
       {selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" onClick={() => setSelectedItem(null)}>
-          <button className="absolute top-6 right-6 text-white"><X size={40}/></button>
-          <img src={selectedItem.url} className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" />
+          <button className="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors"><X size={40}/></button>
+          <img src={selectedItem.url} className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" alt="Full view" />
         </div>
       )}
     </div>

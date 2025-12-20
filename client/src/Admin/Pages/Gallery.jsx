@@ -1,41 +1,49 @@
 import React, { useState, useEffect, useRef } from "react";
 import axiosInstance from "@/api/axiosInstance.jsx";
 import { showToast } from "@/utils/customToast.jsx";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Trash2, 
-  Eye, 
-  Upload, 
-  Loader2, 
+import { Switch } from "@/components/ui/switch"; 
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Trash2,
+  Eye,
+  UploadCloud, 
+  Loader2,
   FolderOpen,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Globe,
+  Lock,
+  ListFilter,
+  Image as ImageIcon,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 
 const GalleryManager = () => {
@@ -50,58 +58,110 @@ const GalleryManager = () => {
   const itemsPerPage = 5;
   const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-  useEffect(() => { fetchGalleries(); }, []);
+  useEffect(() => {
+    fetchGalleries();
+  }, []);
 
   const fetchGalleries = async () => {
     try {
       const res = await axiosInstance.get("/gallery/all");
       setGalleries(res.data);
-    } catch (err) { console.error("Fetch Error:", err); }
+    } catch (err) {
+      console.error("Fetch Error:", err);
+    }
   };
 
   const handleUpload = async () => {
-    if (!title || selectedFiles.length === 0) return showToast("error", "Title and images required");
+    if (!title || selectedFiles.length === 0)
+      return showToast("error", "Title and images required");
 
-    const oversizedFiles = selectedFiles.filter(file => file.size > MAX_FILE_SIZE);
+    const oversizedFiles = selectedFiles.filter(
+      (file) => file.size > MAX_FILE_SIZE
+    );
     if (oversizedFiles.length > 0) {
       return showToast("error", "One or more files exceed the 5MB limit");
     }
 
     const formData = new FormData();
     formData.append("title", title);
-    selectedFiles.forEach(file => formData.append("images", file));
+    selectedFiles.forEach((file) => formData.append("images", file));
 
     setLoading(true);
     try {
-      await axiosInstance.post("/gallery/upload", formData, { 
-        headers: { "Content-Type": "multipart/form-data" } 
+      await axiosInstance.post("/gallery/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
       showToast("success", "Images Added Successfully");
       setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       fetchGalleries();
-    } catch (err) { 
-      showToast("error", "Upload failed"); 
-    } finally { 
-      setLoading(false); 
+    } catch (err) {
+      console.log(err);
+      showToast("error", "Upload failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleVisibility = async (id, currentStatus) => {
+    try {
+      const newStatus = !currentStatus;
+      await axiosInstance.patch(`/gallery/update-visibility/${id}`, {
+        isPublic: newStatus
+      });
+      
+      setGalleries(prev => prev.map(g => 
+        g._id === id ? { ...g, isPublic: newStatus } : g
+      ));
+      
+      showToast("success", newStatus ? "Gallery is Public" : "Gallery is Hidden");
+    } catch (err) {
+      console.error(err);
+      showToast("error", "Failed to update status");
+    }
+  };
+
+  const toggleTabDisplay = async (id, currentStatus) => {
+    try {
+      const newStatus = !currentStatus;
+      await axiosInstance.patch(`/gallery/update-tabs/${id}`, {
+        showInTabs: newStatus
+      });
+      
+      setGalleries(prev => prev.map(g => 
+        g._id === id ? { ...g, showInTabs: newStatus } : g
+      ));
+      
+      showToast("success", newStatus ? "Title added to Tabs" : "Title removed from Tabs");
+    } catch (err) {
+      console.error(err);
+      showToast("error", "Failed to update tab status");
     }
   };
 
   const deleteSingleImage = async (galleryId, imageUrl) => {
     try {
-      await axiosInstance.patch(`/gallery/delete-image/${galleryId}`, { imageUrl });
+      await axiosInstance.patch(`/gallery/delete-image/${galleryId}`, {
+        imageUrl,
+      });
       showToast("success", "Image deleted");
       fetchGalleries();
-    } catch (err) { showToast("error", "Delete failed"); }
+    } catch (err) {
+      console.log(err);
+      showToast("error", "Delete failed");
+    }
   };
 
   const deleteFullGallery = async (id) => {
-    if (!window.confirm("Are you sure?")) return;
+    if (!window.confirm("Are you sure? This deletes the folder and all images.")) return;
     try {
       await axiosInstance.delete(`/gallery/delete/${id}`);
       showToast("success", "Gallery removed");
       fetchGalleries();
-    } catch (err) { showToast("error", "Delete failed"); }
+    } catch (err) {
+      console.log(err);
+      showToast("error", "Delete failed");
+    }
   };
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -110,146 +170,333 @@ const GalleryManager = () => {
   const totalPages = Math.ceil(galleries.length / itemsPerPage);
 
   return (
-    /* Adjusted padding: p-3 for mobile, sm:p-6 for tablet, md:p-10 for desktop */
-    <div className="relative min-h-screen bg-background p-3 sm:p-6 md:p-10">
-      
+    <div className="relative min-h-screen p-4 md:p-8 bg-slate-50/50 font-sans text-slate-900">
       {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm font-medium text-muted-foreground">Uploading assets...</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-xl shadow-xl border">
+            <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+            <p className="text-sm font-semibold text-slate-600">Processing Request...</p>
           </div>
         </div>
       )}
 
-      {/* Added mx-auto and refined max-width for better centering */}
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Gallery Manager</h1>
-          <p className="text-sm text-muted-foreground">Organize and manage your media library (Max 5MB per file).</p>
+      <div className="mx-auto max-w-7xl space-y-8">
+        {/* Header */}
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Gallery Manager</h1>
+          <p className="text-slate-500 max-w-2xl">
+            Upload new assets, manage existing collections, and control how they appear on your live website.
+          </p>
         </div>
 
-        <Separator />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* LEFT COLUMN: Upload & List (Span 2) */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* 1. Modern Upload Card */}
+            <Card className="shadow-sm border-slate-200 overflow-hidden">
+              <CardHeader className="bg-slate-50/50 border-b border-slate-100 pt-5 pb-4">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2 text-slate-800">
+                  <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                    <UploadCloud className="h-5 w-5" />
+                  </div>
+                  Upload Assets
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* Left: Destination Logic */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Destination</label>
+                        <Select
+                        value={isNewTitle ? "NEW" : title}
+                        onValueChange={(v) => {
+                            setIsNewTitle(v === "NEW");
+                            setTitle(v === "NEW" ? "" : v);
+                        }}
+                        >
+                        <SelectTrigger className="h-10 bg-white border-slate-200 focus:ring-blue-500">
+                            <SelectValue placeholder="Select location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="NEW" className="text-blue-600 font-medium">+ Create New Folder</SelectItem>
+                            <Separator className="my-1"/>
+                            {galleries.map((g) => (
+                            <SelectItem key={g._id} value={g.title}>{g.title}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
 
-        <Card className="shadow-sm">
-          <CardHeader className="px-4 sm:px-6">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <Upload className="h-4 w-4" /> Upload Assets
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 sm:px-6 pb-6">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-              <div className="md:col-span-3 space-y-1.5">
-                <label className="text-xs font-medium uppercase text-muted-foreground">Target Folder</label>
-                <Select value={isNewTitle ? "NEW" : title} onValueChange={(v) => { setIsNewTitle(v === "NEW"); setTitle(v === "NEW" ? "" : v); }}>
-                  <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="NEW" className="text-primary font-medium">+ Create New</SelectItem>
-                    {galleries.map(g => <SelectItem key={g._id} value={g.title}>{g.title}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                    {isNewTitle && (
+                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Folder Name</label>
+                        <Input
+                            placeholder="e.g., Summer Collection"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="h-10 border-slate-200 focus-visible:ring-blue-500"
+                        />
+                        </div>
+                    )}
+                  </div>
+
+                  {/* Right: Dropzone Style Input */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Files</label>
+                    <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`
+                            group border-2 border-dashed rounded-xl h-32 flex flex-col items-center justify-center 
+                            cursor-pointer transition-all duration-200 text-center px-4
+                            ${selectedFiles.length > 0 
+                                ? "border-green-400 bg-green-50/50" 
+                                : "border-slate-300 hover:border-blue-400 hover:bg-slate-50"
+                            }
+                        `}
+                    >
+                        <Input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
+                        />
+                        
+                        {selectedFiles.length > 0 ? (
+                            <div className="flex flex-col items-center text-green-600 animate-in zoom-in-50">
+                                <CheckCircle2 className="h-8 w-8 mb-2" />
+                                <span className="text-sm font-medium">{selectedFiles.length} files selected</span>
+                                <span className="text-xs opacity-70">Click to change</span>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center text-slate-400 group-hover:text-blue-500 transition-colors">
+                                <ImageIcon className="h-8 w-8 mb-2" />
+                                <span className="text-sm font-medium">Click to browse</span>
+                                <span className="text-xs opacity-70">or drag files here</span>
+                            </div>
+                        )}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 pt-2">
+                    <Button 
+                        onClick={handleUpload} 
+                        disabled={selectedFiles.length === 0 || loading} 
+                        className="w-full bg-slate-900 hover:bg-slate-800 h-11 text-base shadow-md"
+                    >
+                        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <UploadCloud className="mr-2 h-4 w-4"/>}
+                        Start Upload
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 2. Management Table */}
+            <Card className="shadow-sm border-slate-200 overflow-hidden flex flex-col">
+               <CardHeader className="bg-white border-b border-slate-100 pb-4">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2 text-slate-800">
+                  <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
+                    <FolderOpen className="h-5 w-5" />
+                  </div>
+                  Current Galleries
+                </CardTitle>
+              </CardHeader>
+              
+              <div className="flex-1 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+                      <TableHead className="w-[40%] pl-6">Directory</TableHead>
+                      <TableHead>Status Overview</TableHead>
+                      <TableHead className="text-right pr-6">Quick Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentGalleries.length === 0 ? (
+                         <TableRow>
+                            <TableCell colSpan={3} className="h-32 text-center text-slate-400">
+                                No galleries found. create one above.
+                            </TableCell>
+                         </TableRow>
+                    ) : (
+                        currentGalleries.map((g) => (
+                        <TableRow key={g._id} className="hover:bg-slate-50/50 transition-colors">
+                            <TableCell className="py-4 pl-6">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 flex items-center justify-center rounded-lg border bg-white shadow-sm text-slate-500">
+                                <FolderOpen className="h-5 w-5" />
+                                </div>
+                                <div className="flex flex-col">
+                                <span className="font-semibold text-slate-800">{g.title}</span>
+                                <span className="text-xs text-slate-500">{g.imagePaths.length} images stored</span>
+                                </div>
+                            </div>
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex items-center gap-2">
+                                {g.isPublic ? (
+                                    <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200 shadow-none">Public</Badge>
+                                ) : (
+                                    <Badge variant="outline" className="text-slate-500 border-slate-300 bg-slate-50">Hidden</Badge>
+                                )}
+                                {g.showInTabs && (
+                                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 border border-blue-100 shadow-none">On Menu</Badge>
+                                )}
+                                </div>
+                            </TableCell>
+                            <TableCell className="text-right pr-6">
+                                <div className="flex items-center justify-end gap-1">
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50">
+                                                <Eye className="h-4 w-4"/>
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+                                            <DialogHeader className="p-6 pb-2">
+                                                <DialogTitle className="flex items-center gap-2">
+                                                    <FolderOpen className="h-5 w-5 text-slate-400"/> 
+                                                    {g.title} <span className="text-slate-400 font-normal text-sm">({g.imagePaths.length} items)</span>
+                                                </DialogTitle>
+                                            </DialogHeader>
+                                            <ScrollArea className="flex-1 p-6 pt-2">
+                                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                                {g.imagePaths.map((path, idx) => (
+                                                    <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-200 aspect-square bg-slate-100">
+                                                        <img src={path} alt="" className="w-full h-full object-cover"/>
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <Button 
+                                                                variant="destructive" size="icon" className="h-8 w-8 rounded-full"
+                                                                onClick={() => deleteSingleImage(g._id, path)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                </div>
+                                            </ScrollArea>
+                                        </DialogContent>
+                                    </Dialog>
+                                    
+                                    <Button 
+                                        variant="ghost" size="icon" 
+                                        className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                        onClick={() => deleteFullGallery(g._id)}
+                                    >
+                                        <Trash2 className="h-4 w-4"/>
+                                    </Button>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-
-              {isNewTitle && (
-                <div className="md:col-span-3 space-y-1.5 animate-in slide-in-from-left-2">
-                  <label className="text-xs font-medium uppercase text-muted-foreground">Folder Name</label>
-                  <Input placeholder="Enter title..." value={title} onChange={(e) => setTitle(e.target.value)} />
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between p-4 border-t bg-slate-50/30 text-sm text-slate-500">
+                    <span className="pl-2">Page {currentPage} of {totalPages}</span>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage===1}>
+                            <ChevronLeft className="h-4 w-4"/>
+                        </Button>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage===totalPages}>
+                            <ChevronRight className="h-4 w-4"/>
+                        </Button>
+                    </div>
                 </div>
               )}
+            </Card>
+          </div>
 
-              <div className={`space-y-1.5 ${isNewTitle ? 'md:col-span-4' : 'md:col-span-7'}`}>
-                <label className="text-xs font-medium uppercase text-muted-foreground">Images</label>
-                <Input ref={fileInputRef} type="file" multiple accept="image/*" className="cursor-pointer" onChange={(e) => setSelectedFiles(Array.from(e.target.files))} />
-              </div>
-
-              <div className="md:col-span-2">
-                <Button onClick={handleUpload} disabled={selectedFiles.length === 0} className="w-full font-medium">Save</Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Table Section: Responsive horizontal padding */}
-        <Card className="shadow-sm overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-[40%] pl-4 sm:pl-6">Directory Name</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead className="hidden sm:table-cell">Modified</TableHead>
-                  <TableHead className="text-right pr-4 sm:pr-6">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {currentGalleries.map((g) => (
-                  <TableRow key={g._id} className="transition-colors hover:bg-muted/30">
-                    <TableCell className="py-4 pl-4 sm:pl-6">
-                      <div className="flex items-center gap-3">
-                        <div className="hidden xs:flex h-9 w-9 items-center justify-center rounded-md border bg-background text-muted-foreground"><FolderOpen className="h-4 w-4" /></div>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-sm truncate max-w-[150px] sm:max-w-none">{g.title}</span>
-                          <span className="text-[10px] text-muted-foreground font-mono">ID: {g._id.slice(-6)}</span>
+          {/* RIGHT COLUMN: Visibility Control Center */}
+          <div className="lg:col-span-1">
+            <Card className="shadow-md border-indigo-100 h-auto bg-gradient-to-b from-white to-slate-50/50">
+              <CardHeader className="pb-4 border-b border-indigo-50 bg-indigo-50/30">
+                <CardTitle className="text-base font-semibold flex items-center gap-2 text-indigo-900">
+                  <Globe className="h-4 w-4 text-indigo-600" /> 
+                  Control Center
+                </CardTitle>
+                <CardDescription className="text-indigo-900/60">
+                  Manage website visibility and menu links.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 px-4">
+                <ScrollArea className="h-[calc(100vh-300px)] pr-4">
+                    <div className="space-y-4">
+                    {galleries.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center text-slate-400 border-2 border-dashed rounded-xl">
+                            <AlertCircle className="h-8 w-8 mb-2 opacity-50"/>
+                            <p className="text-sm">No items to configure.</p>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell><Badge variant="secondary" className="font-normal">{g.imagePaths.length} <span className="hidden xs:inline ml-1">items</span></Badge></TableCell>
-                    <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">{new Date(g.updatedAt).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right pr-4 sm:pr-6 space-x-1 sm:space-x-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="h-8 px-2 sm:px-3"><Eye className="sm:mr-2 h-3.5 w-3.5" /> <span className="hidden sm:inline">View</span></Button>
-                        </DialogTrigger>
-                        {/* Modal padding and width check */}
-                        <DialogContent className="w-[95vw] sm:max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-                          <DialogHeader className="p-4 sm:p-6 border-b">
-                            <DialogTitle>{g.title}</DialogTitle>
-                          </DialogHeader>
-                          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-muted/20">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                              {g.imagePaths.map((path, idx) => (
-                                <div key={idx} className="group relative aspect-square rounded-md border bg-background overflow-hidden shadow-sm">
-                                  <img src={path} className="h-full w-full object-cover" alt="gallery-item" />
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <Button variant="destructive" size="icon" className="h-8 w-8 rounded-full" onClick={() => deleteSingleImage(g._id, path)}><Trash2 className="h-4 w-4" /></Button>
-                                  </div>
+                    ) : (
+                        galleries.map((gallery) => (
+                        <div 
+                            key={gallery._id} 
+                            className="group flex flex-col gap-3 p-4 rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200"
+                        >
+                            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                <div className="flex items-center gap-2 font-medium text-slate-800">
+                                    <FolderOpen className="h-4 w-4 text-indigo-400"/>
+                                    {gallery.title}
                                 </div>
-                              ))}
+                                {gallery.isPublic && (
+                                    <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                )}
                             </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-destructive" onClick={() => deleteFullGallery(g._id)}><Trash2 className="h-4 w-4"/></Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+
+                            {/* Control 1: Is Public? */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                                        Public Access
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">Visible on website</span>
+                                </div>
+                                <Switch 
+                                    checked={gallery.isPublic}
+                                    onCheckedChange={() => toggleVisibility(gallery._id, gallery.isPublic)}
+                                    className="data-[state=checked]:bg-green-600"
+                                />
+                            </div>
+
+                            {/* Control 2: Show in Tabs? */}
+                            <div className={`
+                                flex items-center justify-between p-2 rounded-lg transition-colors
+                                ${gallery.isPublic ? "bg-slate-50" : "bg-slate-100/50 opacity-60 pointer-events-none"}
+                            `}>
+                                <div className="flex flex-col">
+                                    <span className={`text-sm font-medium flex items-center gap-2 ${gallery.showInTabs && gallery.isPublic ? "text-blue-600" : "text-slate-600"}`}>
+                                        Show in Tabs
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">Add to filter menu</span>
+                                </div>
+                                <Switch 
+                                    checked={gallery.showInTabs}
+                                    disabled={!gallery.isPublic}
+                                    onCheckedChange={() => toggleTabDisplay(gallery._id, gallery.showInTabs)}
+                                    className="data-[state=checked]:bg-blue-600"
+                                />
+                            </div>
+                        </div>
+                        ))
+                    )}
+                    </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-4 border-t bg-muted/20 gap-4">
-            <div className="text-sm text-muted-foreground text-center sm:text-left">
-              Showing <span className="font-medium text-foreground">{indexOfFirstItem + 1}</span> to <span className="font-medium text-foreground">{Math.min(indexOfLastItem, galleries.length)}</span> of <span className="font-medium text-foreground">{galleries.length}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" size="sm" 
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1} className="h-8 w-8 p-0"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="text-xs font-medium">Page {currentPage} of {totalPages || 1}</div>
-              <Button 
-                variant="outline" size="sm" 
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages || totalPages === 0} className="h-8 w-8 p-0"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </Card>
+        </div>
       </div>
     </div>
   );

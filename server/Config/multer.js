@@ -16,6 +16,7 @@ const storage = multer.diskStorage({
     // Unique filename: fieldname-timestamp.extension
     cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
   },
+
 });
 
 const upload = multer({ storage });
