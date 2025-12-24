@@ -1,9 +1,23 @@
+// BlogPreview.jsx (Updated: Author removed from List preview)
 import React, { useState } from "react";
 import { ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 
 const BlogPreview = ({ meta, coverPreview, sections }) => {
   const allBlocks = sections ? sections.flatMap(section => section.items) : [];
   const [openAccordion, setOpenAccordion] = useState(null);
+
+  // Helper: Bold only the first word of the list heading
+  const formatListHeading = (text) => {
+    if (!text || text.trim() === "") return null;
+    const words = text.trim().split(" ");
+    const firstWord = words[0];
+    const rest = words.slice(1).join(" ");
+    return (
+      <h3 className="text-xl font-bold text-gray-900 mb-4">
+        <span className="font-extrabold">{firstWord}</span>{rest ? ` ${rest}` : ""}
+      </h3>
+    );
+  };
 
   return (
     <article className="max-w-2xl mx-auto bg-white min-h-[600px] shadow-lg rounded-lg overflow-hidden pb-10">
@@ -53,11 +67,15 @@ const BlogPreview = ({ meta, coverPreview, sections }) => {
             }
             if (block.type === 'list') {
               return (
-                <ul key={i} className="list-disc pl-6 space-y-2 text-gray-700 my-4 bg-gray-50 p-4 rounded-lg">
-                  {block.data.items.map((item, idx) => (
-                    <li key={idx}>{item || "List item..."}</li>
-                  ))}
-                </ul>
+                <div key={i} className="my-8">
+                  {formatListHeading(block.data.heading)}
+                  <ul className="list-disc pl-6 space-y-3 text-gray-700">
+                    {block.data.items.map((item, idx) => (
+                      <li key={idx} className="leading-relaxed">{item || "List item..."}</li>
+                    ))}
+                  </ul>
+                  {/* Author line removed */}
+                </div>
               );
             }
             if (block.type === 'quote') {

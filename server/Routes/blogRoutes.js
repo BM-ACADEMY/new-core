@@ -4,8 +4,7 @@ const blogController = require('../Controller/blogController'); // Ensure path i
 const upload = require('../Config/blogMulter'); // Ensure path is correct
 const { verifyToken } = require('../middleware/auth'); // IMPORT YOUR AUTH MIDDLEWARE
 
-// Debug Log
-console.log("Blog Controller Functions:", Object.keys(blogController)); 
+
 
 // 1. Create Blog (Protected + File Upload)
 router.post('/', verifyToken, upload.single('coverImage'), blogController.createBlog);
@@ -16,5 +15,13 @@ router.post('/upload-image', verifyToken, upload.single('image'), blogController
 // 3. Public Routes
 router.get('/', blogController.getAllBlogs);
 router.get('/:slug', blogController.getSingleBlog);
+
+router.delete('/delete-image', verifyToken, blogController.deleteContentImage);
+
+// Update Blog (Protected)
+router.put('/:id', verifyToken, upload.single('coverImage'), blogController.updateBlog);
+
+// Delete Blog (Protected)
+router.delete('/:id', verifyToken, blogController.deleteBlog);
 
 module.exports = router;

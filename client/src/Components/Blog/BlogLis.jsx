@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom"; // Added useNavigate
 import axiosInstance from "@/api/axiosInstance.jsx";
 import { Loader, Bookmark } from "lucide-react";
+import logo from "@/assets/logo/logo1.png"
 
 const BlogList = () => {
   const [blogs, setBlogs] = useState([]);
@@ -59,10 +60,8 @@ const BlogList = () => {
                         : `${import.meta.env.VITE_SERVER_URL}${blog.coverImage?.url}`
                     }
                     alt={blog.title}
-                    className="w-full aspect-[16/10] object-cover transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => {
-                      e.target.src = "https://placehold.co/800x500?text=No+Preview";
-                    }}
+                    className="w-full aspect-[16/10] object-cover transition-transform duration-500"
+                    
                   />
                 </div>
               </div>
@@ -88,14 +87,14 @@ const BlogList = () => {
                 </p>
 
                 {/* Footer Section */}
-                <div className="mt-auto pt-4 flex items-center justify-between border-t border-gray-50">
+                <div className="mt-auto pt-4 flex items-center justify-between border-t border-gray-200">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#7e57ff] flex items-center justify-center text-white font-bold text-sm uppercase">
-                      {blog.author?.name?.charAt(0) || "S"}
+                    <div className="w-10 h-10 rounded-full bg-[#ecb812] flex items-center justify-center text-white font-bold text-sm uppercase">
+                      <img src={logo} alt="logo"/>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[14px] font-bold text-[#1a1a1a]">
-                        {blog.author?.name || "Sainath Reddy"}
+                       Core Talents
                       </span>
                       <span className="text-[12px] text-gray-400">
                         {new Date(blog.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}

@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import axiosInstance from "@/api/axiosInstance";
+import { useNavigate } from "react-router-dom";
 import {
   motion,
   useMotionValue,
@@ -31,6 +32,7 @@ const Homepage = () => {
   const [slides, setSlides] = useState([STATIC_FIRST_SLIDE]);
   const [slideIdx, setSlideIdx] = useState(0);
   const controls = useAnimation();
+    const navigate = useNavigate();
 
   // 2. Fetch Banners from Backend
   useEffect(() => {
@@ -245,7 +247,7 @@ const Homepage = () => {
             className="mt-8 flex justify-center"
             variants={textItemVariants}
           >
-            <button className="wave-btn bg-[#ffc804] hover:bg-[#deb006] text-white font-semibold py-3 px-10 rounded-full transition duration-300">
+            <button  onClick={() => navigate("/contact")} className="wave-btn bg-[#ffc804] hover:bg-[#deb006] text-white font-semibold py-3 px-10 rounded-full transition duration-300">
               {current.cta}
             </button>
           </motion.div>

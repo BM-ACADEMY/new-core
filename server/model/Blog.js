@@ -10,9 +10,10 @@ const contentBlockSchema = new mongoose.Schema({
       'paragraph',
       'image',
       'list',
-      'quote',      // ← NEW: Quote block
-      'button',     // ← NEW: Button block
-      'accordion'   // ← NEW: Accordion block
+      'quote',      
+      'button',   
+      'accordion',  
+      'feature'
     ]
   },
   data: {

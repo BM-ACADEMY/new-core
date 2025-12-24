@@ -1,21 +1,16 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const slugify = require('slugify'); // Ensure you have: npm install slugify
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    let blogSlug = 'uncategorized'; // Default fallback to prevent crash
+    // Get slug from body (Frontend MUST send slug in FormData)
+    const blogSlug = req.body.slug || 'temp-uploads'; 
 
-    // Try to get slug from body
-    if (req.body && req.body.slug) {
-      blogSlug = req.body.slug;
-    } 
-
-    // Define path: uploads/blog/blog-slug/
+    // Path: uploads/blog/your-blog-slug/
     const uploadPath = path.join(__dirname, '../uploads/blog', blogSlug);
 
-    // Create directory recursively if it doesn't exist
+    // Create directory if it doesn't exist
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -23,7 +18,6 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    // Sanitize filename
     const cleanName = file.originalname.replace(/\s+/g, '-').toLowerCase();
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + '-' + cleanName);
@@ -41,7 +35,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ 
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 } 
 });
 
 module.exports = upload;
