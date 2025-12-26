@@ -37,7 +37,7 @@ const BlogPreview = ({ meta, coverPreview, sections }) => {
             {meta.category || "General"}
           </span>
           <h1 className="text-3xl font-extrabold text-gray-900 leading-tight">
-            {meta.title || "Your Blog Title..."}
+            {meta.mainHeading || "Your Blog Title..."}
           </h1>
           {meta.description && (
             <p className="text-gray-500 mt-4 text-lg leading-relaxed">

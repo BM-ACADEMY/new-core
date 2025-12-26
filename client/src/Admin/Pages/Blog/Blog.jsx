@@ -5,14 +5,13 @@ import { useAuth } from "@/Context/Authcontext";
 import {
   Type, List as ListIcon, Trash2, Plus, X, Image as ImageIcon,
   CheckCircle, Edit2, ChevronDown, Save, Loader, Layers,
-  Quote, Link, Circle, Upload, ArrowUp, ArrowDown // Added Arrows
+  Quote, Link, Circle, Upload
 } from "lucide-react";
 import BlogPreview from "./BlogPreview";
 
 const BlogCreate = ({ switchToView, editingBlog }) => {
   const { user, loading: authLoading } = useAuth();
 
-  // 1. ADD mainHeading to State
   const [meta, setMeta] = useState({
     title: "", mainHeading: "", slug: "", description: "", tags: "", category: "",
   });
@@ -36,7 +35,7 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
     if (editingBlog) {
       setMeta({
         title: editingBlog.title || "",
-        mainHeading: editingBlog.mainHeading || "", // Populate Main Heading
+        mainHeading: editingBlog.mainHeading || "",
         slug: editingBlog.slug || "",
         description: editingBlog.description || "",
         tags: Array.isArray(editingBlog.tags) ? editingBlog.tags.join(",") : editingBlog.tags || "",
@@ -60,7 +59,6 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
   const handleMetaChange = (e) => {
     const { name, value } = e.target;
     setMeta((prev) => ({ ...prev, [name]: value }));
-    // Auto-generate slug from TITLE (not main heading)
     if (name === "title" && !meta.slug && !editingBlog) {
       setMeta((prev) => ({
         ...prev,
@@ -77,20 +75,6 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
     }
   };
 
-  // --- RE-ARRANGE SECTIONS LOGIC ---
-  const moveSection = (index, direction) => {
-    const newSections = [...sections];
-    if (direction === 'up' && index > 0) {
-      // Swap with previous
-      [newSections[index], newSections[index - 1]] = [newSections[index - 1], newSections[index]];
-    } else if (direction === 'down' && index < sections.length - 1) {
-      // Swap with next
-      [newSections[index], newSections[index + 1]] = [newSections[index + 1], newSections[index]];
-    }
-    setSections(newSections);
-  };
-
-  // ... (Keep existing helpers: addItemToSection, updateItemData, removeItem, handleImageSelect, etc.)
   const addItemToSection = (type) => {
     const activeIdx = sections.findIndex(s => !s.isCompleted);
     if (activeIdx === -1) return;
@@ -213,7 +197,7 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
 
       const formData = new FormData();
       formData.append("title", meta.title);
-      formData.append("mainHeading", meta.mainHeading); // <--- APPEND MAIN HEADING
+      formData.append("mainHeading", meta.mainHeading);
       formData.append("slug", meta.slug);
       formData.append("description", meta.description);
       formData.append("tags", meta.tags);
@@ -253,7 +237,6 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
         <div className="bg-white p-5 rounded-lg shadow-sm border mb-6">
             <h2 className="text-lg font-bold mb-4">{editingBlog ? "Edit Blog" : "Create New Blog"}</h2>
             
-            {/* UPDATED: Cover Image Input Style */}
             <div className="mb-6">
                 <label className="block w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors relative group overflow-hidden bg-gray-50">
                     <input type="file" onChange={handleCoverImageChange} className="hidden" accept="image/*" />
@@ -279,7 +262,6 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
                    <input name="title" value={meta.title} onChange={handleMetaChange} placeholder="Internal Name (e.g. Draft 1)" className="w-full border p-2 rounded text-sm"/>
                 </div>
 
-                {/* NEW: Main Heading Input */}
                 <div>
                    <label className="text-xs font-bold text-gray-500 uppercase text-blue-600">Main Heading (H1)</label>
                    <input name="mainHeading" value={meta.mainHeading} onChange={handleMetaChange} placeholder="The Big Display Title" className="w-full text-xl font-bold border-b-2 border-blue-100 focus:border-blue-500 outline-none py-1"/>
@@ -313,13 +295,6 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
 
                 {/* Section Header Right (Controls) */}
                 <div className="flex gap-2 items-center">
-                    {/* NEW: Re-arrange Buttons */}
-                    <div className="flex bg-black/10 rounded mr-2">
-                        <button onClick={(e) => {e.stopPropagation(); moveSection(sIdx, 'up')}} disabled={sIdx === 0} className="p-1 hover:bg-black/20 text-white disabled:opacity-30"><ArrowUp size={14}/></button>
-                        <div className="w-[1px] bg-black/10"></div>
-                        <button onClick={(e) => {e.stopPropagation(); moveSection(sIdx, 'down')}} disabled={sIdx === sections.length - 1} className="p-1 hover:bg-black/20 text-white disabled:opacity-30"><ArrowDown size={14}/></button>
-                    </div>
-
                     {section.isCompleted ? (
                     <>
                         <button onClick={()=>editSection(sIdx)} className="p-1 hover:bg-white hover:text-blue-600 rounded text-gray-500"><Edit2 size={16}/></button>
@@ -338,11 +313,9 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
                         <div key={iIdx} className="bg-white p-3 rounded shadow-sm border relative group animate-in slide-in-from-bottom-2 fade-in">
                         <button onClick={()=>removeItem(sIdx, iIdx)} className="absolute top-2 right-2 text-gray-300 hover:text-red-500 z-10"><X size={14}/></button>
                         
-                        {/* Heading & Paragraph inputs remain same... */}
                         {item.type === 'heading' && <input placeholder="Heading Text" value={item.data.text} onChange={(e)=>updateItemData(sIdx, iIdx, 'text', e.target.value)} className="w-full font-bold text-lg outline-none border-b border-transparent focus:border-blue-300 placeholder:text-gray-300"/>}
                         {item.type === 'paragraph' && <textarea placeholder="Write paragraph..." value={item.data.text} onChange={(e)=>updateItemData(sIdx, iIdx, 'text', e.target.value)} className="w-full min-h-[80px] text-sm outline-none resize-y placeholder:text-gray-300"/>}
 
-                        {/* UPDATED: Content Image Input Style */}
                         {item.type === 'image' && (
                             <div className="space-y-2">
                             {item.data.url ? (
@@ -367,7 +340,6 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
                             </div>
                         )}
 
-                        {/* ... (Keep List, Quote, Button, Accordion logic exactly as is) ... */}
                         {item.type === 'list' && (
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
@@ -418,7 +390,6 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
 
                     <div className="flex items-center justify-between border-t border-gray-200 pt-4 flex-wrap gap-2">
                     <div className="flex gap-2 flex-wrap">
-                        {/* Tool Buttons */}
                         <SmallToolBtn icon={<Type size={14}/>} label="Heading" onClick={()=>addItemToSection('heading')}/>
                         <SmallToolBtn icon={<Type size={12}/>} label="Para" onClick={()=>addItemToSection('paragraph')}/>
                         <SmallToolBtn icon={<ImageIcon size={14}/>} label="Img" onClick={()=>addItemToSection('image')}/>
@@ -444,7 +415,6 @@ const BlogCreate = ({ switchToView, editingBlog }) => {
             )}
         </div>
         
-        {/* Submit Button */}
         {activeSectionIndex === -1 && (
             <div className="sticky bottom-4 bg-white/80 backdrop-blur p-4 border-t shadow-lg rounded-t-xl">
             <button onClick={handleSubmit} disabled={submitting} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-bold shadow-md hover:shadow-xl transition transform hover:-translate-y-1 flex justify-center items-center gap-2">
