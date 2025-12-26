@@ -11,6 +11,7 @@ import Contactroutes from "./Contactroutes";
 import ThankYou from "@/Components/Contact/ThankYou";
 import Blogroute from "./blogroute";
 import BlogList from "@/Components/Blog/BlogLis";
+import Privacypolicy from "@/Components/privacy-policy/Privacypolicy";
 
 const Mainroutes = () => {
   return (
@@ -22,6 +23,7 @@ const Mainroutes = () => {
       <Route path="/thank-you" element={<ThankYou />} />
       <Route path="/blog/*" element={<Blogroute />} />
       <Route path="/blog" element={<BlogList />} />
+      <Route path="/privacy-policy" element={<Privacypolicy />} />
 
       <Route
         path="/login"

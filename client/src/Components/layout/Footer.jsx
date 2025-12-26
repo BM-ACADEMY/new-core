@@ -22,6 +22,7 @@ const navItems = [
   },
   { title: 'Blog', to: '/blog' },
   { title: 'Contact', to: '/contact' },
+  { title: 'Privacy Policy', to: '/privacy-policy' },
 ];
 
 // ==========================================
@@ -233,7 +234,7 @@ const Footer = () => {
               {/* 2. COMPANY / QUICK LINKS COLUMN */}
               <div>
                 <h3 className="text-white font-semibold text-lg mb-6 relative inline-block group">
-                  Usefull Links``
+                  Usefull Links
                   <span className="absolute -bottom-2 left-0 w-6 h-[3px] bg-[#5D5FEF] rounded-full"></span>
                   <span className="absolute -bottom-2 left-8 w-2 h-[3px] bg-[#5D5FEF] rounded-full animate-move-line"></span>
                 </h3>
@@ -250,12 +251,12 @@ const Footer = () => {
                   ))}
                   {/* Brochure Button Link */}
                   <li>
-                    <button
+                    {/* <button
                       onClick={() => setModalOpen(true)}
                       className="text-sm text-[#8a8a9e] hover:text-[#f0b104] transition-colors duration-200 block transform hover:translate-x-1 transition-transform text-left"
                     >
                       Brochure
-                    </button>
+                    </button> */}
                   </li>
                 </ul>
               </div>
@@ -275,9 +276,22 @@ const Footer = () => {
                         className="text-sm hover:text-[#5D5FEF] transition-colors duration-200 block transform hover:translate-x-1 transition-transform"
                       >
                         {item.label}
+                        
                       </Link>
+                       {/* <button
+                      onClick={() => setModalOpen(true)}
+                      className="text-sm text-[#8a8a9e] hover:text-[#f0b104] transition-colors duration-200 block transform hover:translate-x-1 transition-transform text-left"
+                    >
+                      Brochure
+                    </button> */}
                     </li>
                   ))}
+                   <button
+                      onClick={() => setModalOpen(true)}
+                      className="text-sm text-[#8a8a9e] hover:text-[#f0b104] transition-colors duration-200 block transform hover:translate-x-1 transition-transform text-left"
+                    >
+                      Brochure
+                    </button>
                 </ul>
               </div>
 
