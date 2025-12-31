@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import html2pdf from 'html2pdf.js';
 import { 
   ChevronLeft, ChevronRight, Download, Save, Loader2,
@@ -8,8 +9,9 @@ import {
 } from 'lucide-react';
 
 // --- Custom Utilities ---
-import axiosInstance from '@/api/axiosInstance'; // Adjust path based on your folder structure
-import { showToast } from '@/utils/customToast'; // Adjust path based on your folder structure
+// Ensure these paths match your project structure
+import axiosInstance from '@/api/axiosInstance'; 
+import { showToast } from '@/utils/customToast'; 
 
 // --- Types & Initial State ---
 const INITIAL_STATE = {
@@ -40,6 +42,7 @@ const STEPS = [
 ];
 
 export default function ResumeBuilder() {
+  const { id } = useParams(); // Get the Resume ID from the URL
   const [currentStep, setCurrentStep] = useState(0);
   const [resumeData, setResumeData] = useState(INITIAL_STATE);
   const [activeColor, setActiveColor] = useState('#3b82f6');
@@ -55,30 +58,41 @@ export default function ResumeBuilder() {
   // --- 1. Fetch Resume on Mount ---
   useEffect(() => {
     const fetchResume = async () => {
+      setIsLoading(true);
       try {
-        // Updated endpoint to append to VITE_BASE_URL (api/resume/me)
-        const res = await axiosInstance.get('/resume/me');
-        if (res.data) {
+        // If ID exists in URL, fetch that specific resume.
+        // Otherwise, fall back to 'me' (though Dashboard flow usually provides an ID now)
+        const endpoint = id ? `/resume/${id}` : '/resume/me';
+        
+        const res = await axiosInstance.get(endpoint);
+        
+        // Handle potentially different response structures ({data: ...} vs direct object)
+        const fetchedData = res.data.data || res.data;
+
+        if (fetchedData) {
           setResumeData(prev => ({
             ...prev,
-            ...res.data,
-            personalInfo: { ...prev.personalInfo, ...res.data.personalInfo }
+            ...fetchedData,
+            // Merge personalInfo carefully to avoid overwriting with nulls
+            personalInfo: { ...prev.personalInfo, ...(fetchedData.personalInfo || {}) }
           }));
-          if (res.data.themeColor) setActiveColor(res.data.themeColor);
-        //   showToast("success", "Resume loaded successfully");
+          
+          if (fetchedData.themeColor) setActiveColor(fetchedData.themeColor);
         }
       } catch (error) {
-        // 404 is expected for a new user, so we don't error toast that
-        if (error.response && error.response.status !== 404) {
-            console.error("Error fetching resume", error);
-            showToast("error", "Failed to load existing resume");
+        // If it's a 404 and we have an ID, that's an error. 
+        // If no ID and 404, it might just be a new user (handled by default state).
+        if (id && error.response?.status === 404) {
+             showToast("error", "Resume not found");
+        } else if (error.response?.status !== 404) {
+             console.error("Error fetching resume", error);
         }
       } finally {
         setIsLoading(false);
       }
     };
     fetchResume();
-  }, []);
+  }, [id]);
 
   // --- 2. Save Logic ---
   const handleSaveToBackend = async () => {
@@ -86,6 +100,10 @@ export default function ResumeBuilder() {
     try {
       const formData = new FormData();
 
+      // If we have an ID from URL, send it so backend knows which doc to update
+      if (id) formData.append("resumeId", id);
+
+      // Append Image if a new one was selected
       if (imageFile) formData.append("resumeImage", imageFile);
 
       // Stringify complex objects for FormData
@@ -98,12 +116,14 @@ export default function ResumeBuilder() {
       formData.append("summary", resumeData.summary || "");
       formData.append("themeColor", activeColor);
 
-      // Override the default application/json header for this request
       const res = await axiosInstance.post('/resume/save', formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
 
-      setResumeData(prev => ({ ...prev, ...res.data }));
+      // Update state with returned data (useful if backend sanitized something)
+      const savedData = res.data.data || res.data;
+      setResumeData(prev => ({ ...prev, ...savedData }));
+      
       setImageFile(null); 
       setLastSaved(new Date());
       showToast("success", "Resume saved successfully!");
@@ -119,14 +139,13 @@ export default function ResumeBuilder() {
   const handleDownloadPDF = () => {
     const element = resumePreviewRef.current;
     
-    // Options for html2pdf
     const opt = {
       margin:       0,
       filename:     `${resumeData.personalInfo.fullName || 'Resume'}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { 
           scale: 2, 
-          useCORS: true, // IMPORTANT for images
+          useCORS: true, 
           logging: false
       },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -254,7 +273,7 @@ export default function ResumeBuilder() {
                         className="w-full h-full object-contain" 
                     />
                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Upload className="w-6 h-6 text-white" />
+                          <Upload className="w-6 h-6 text-white" />
                     </div>
                 </div>
               ) : (
@@ -730,8 +749,8 @@ export default function ResumeBuilder() {
                      <div className="flex flex-wrap gap-x-1 text-sm text-slate-700">
                          {resumeData.skills.map((skill, index) => (
                            <span key={skill.id} className="inline-block">
-                              • {skill.name}
-                              {index !== resumeData.skills.length - 1 && <span className="mr-1"></span>}
+                             • {skill.name}
+                             {index !== resumeData.skills.length - 1 && <span className="mr-1"></span>}
                            </span>
                          ))}
                      </div>

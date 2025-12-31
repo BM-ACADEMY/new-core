@@ -1,20 +1,22 @@
 const express = require("express");
 const router = express.Router();
 const resumeController = require("../Controller/resumeController");
-const { verifyToken } = require("../middleware/auth"); // Assuming you have this from your snippets
+const { verifyToken } = require("../middleware/auth");
 const upload = require("../Config/Resumeupload");
 
-// Route to get current user's resume
-router.get("/me", verifyToken, resumeController.getMyResume);
+// Create new resume (init with title)
+router.post("/create", verifyToken, resumeController.createResume);
 
-// Route to create or update resume (handles file upload)
-// Field name in frontend FormData must be 'resumeImage' or just match the input
-router.post(
-  "/save", 
-  verifyToken,                 // 1. Auth First (creates req.user)
-  upload.single("resumeImage"), // 2. Upload Second (creates req.file)
-  resumeController.saveResume   // 3. Controller
-);
-router.delete("/me", verifyToken, resumeController.deleteResume);
+// Get all resumes for dashboard
+router.get("/all", verifyToken, resumeController.getAllResumes);
+
+// Save/Update resume (uses FormData)
+router.post("/save", verifyToken, upload.single("resumeImage"), resumeController.saveResume);
+
+// Get specific resume by ID
+router.get("/:id", verifyToken, resumeController.getResumeById);
+
+// Delete specific resume
+router.delete("/:id", verifyToken, resumeController.deleteResume);
 
 module.exports = router;

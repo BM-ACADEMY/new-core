@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import UserDashboard from '@/userdashbaord/UserDashboard';
-import CreateResume from '@/userdashbaord/Pages/CreateResume';
+import CreateResume from '@/userdashbaord/Pages/CreateResume'; // Assuming this exports the ResumeBuilder component
 
 const Userroutes = () => {
   return (
@@ -12,8 +12,8 @@ const Userroutes = () => {
       {/* /user/dashboard */}
       <Route path="dashboard" element={<UserDashboard />} />
       
-      {/* /user/create-resume */}
-      <Route path="create-resume" element={<CreateResume />} />
+      {/* /user/create-resume (For new) OR /user/create-resume/:id (For editing existing) */}
+      <Route path="create-resume/:id?" element={<CreateResume />} />
       
     </Routes>
   );

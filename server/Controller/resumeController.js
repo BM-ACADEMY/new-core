@@ -1,132 +1,122 @@
 const Resume = require("../model/ResumeModel");
-const fs = require("fs");
-const path = require("path");
 
-// Create or Update Resume
-exports.saveResume = async (req, res) => {
-  console.log("------------------- RESUME SAVE ATTEMPT -------------------");
-  console.log("1. User ID:", req.user ? req.user.id : "USER NOT FOUND");
-  console.log("2. File received:", req.file ? req.file.filename : "No file uploaded");
-  console.log("3. Body keys received:", Object.keys(req.body));
-
+// 1. Create a Blank Resume (Called when user clicks "Create" in Modal)
+exports.createResume = async (req, res) => {
   try {
-    // --- 1. SAFE PARSING HELPER ---
-    // FormData sends objects as JSON strings. We must parse them safely.
-    const parseData = (data) => {
-      if (!data) return []; // Return empty array/obj if undefined
-      try {
-        return typeof data === "string" ? JSON.parse(data) : data;
-      } catch (e) {
-        console.error("JSON Parse Error for field:", data);
-        return []; // Fallback to empty
-      }
-    };
-
-    // Extract and Parse
-    let personalInfo = req.body.personalInfo ? JSON.parse(req.body.personalInfo) : {};
-    let experience = parseData(req.body.experience);
-    let education = parseData(req.body.education);
-    let projects = parseData(req.body.projects);
-    let skills = parseData(req.body.skills);
-    let summary = req.body.summary || "";
-    let themeColor = req.body.themeColor || "#3b82f6";
-
-    // --- 2. HANDLE IMAGE URL ---
-    // If a file was uploaded, create the URL. 
-    // If not, keep the existing image URL from personalInfo (if it exists).
-    let imageUrl = personalInfo.image || ""; 
+    const { title } = req.body;
     
-    if (req.file) {
-      // NOTE: Ensure process.env.SERVER_URL is defined in .env (e.g., http://localhost:4000)
-      const serverUrl = process.env.SERVER_URL || "http://localhost:4000";
-      imageUrl = `${serverUrl}/uploads/resume/${req.file.filename}`;
-    }
-
-    // Update personalInfo object with the correct image URL
-    personalInfo.image = imageUrl;
-
-    // --- 3. DATABASE OPERATION ---
-    // Check if user exists
-    if (!req.user || !req.user.id) {
-        return res.status(401).json({ message: "Unauthorized: User not identified" });
-    }
-
-    let resume = await Resume.findOne({ user: req.user.id });
-
-    if (resume) {
-      // UPDATE EXISTING
-      console.log("4. Updating existing resume...");
-      resume.personalInfo = personalInfo;
-      resume.summary = summary;
-      resume.experience = experience;
-      resume.education = education;
-      resume.projects = projects;
-      resume.skills = skills;
-      resume.themeColor = themeColor;
-      
-      const updatedResume = await resume.save();
-      console.log("5. Success: Resume updated");
-      return res.status(200).json(updatedResume);
-    } else {
-      // CREATE NEW
-      console.log("4. Creating new resume...");
-      const newResume = new Resume({
-        user: req.user.id,
-        personalInfo,
-        summary,
-        experience,
-        education,
-        projects,
-        skills,
-        themeColor
-      });
-      
-      const savedResume = await newResume.save();
-      console.log("5. Success: Resume created");
-      return res.status(201).json(savedResume);
-    }
-
-  } catch (error) {
-    console.error("!!! SERVER ERROR !!!", error);
-    
-    // Send specific error message to frontend to help debug
-    res.status(500).json({ 
-        message: "Server error while saving resume", 
-        error: error.message 
+    const newResume = await Resume.create({
+      user: req.user.id,
+      title: title || "Untitled Resume",
+      personalInfo: {},
+      experience: [],
+      education: [],
+      projects: [],
+      skills: []
     });
+
+    res.status(201).json({
+      success: true,
+      message: "Resume created successfully",
+      data: newResume
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Get User's Resume
-exports.getMyResume = async (req, res) => {
+// 2. Get All Resumes for Dashboard
+exports.getAllResumes = async (req, res) => {
   try {
-    const resume = await Resume.findOne({ user: req.user.id });
+    // Select specific fields to make the dashboard load faster
+    const resumes = await Resume.find({ user: req.user.id })
+      .select("title updatedAt personalInfo.fullName personalInfo.profession themeColor")
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: resumes
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 3. Get Specific Resume by ID (For the Builder Page)
+exports.getResumeById = async (req, res) => {
+  try {
+    const resume = await Resume.findOne({ 
+      _id: req.params.id, 
+      user: req.user.id 
+    });
+
     if (!resume) {
-      return res.status(404).json({ message: "No resume found" });
+      return res.status(404).json({ success: false, message: "Resume not found" });
     }
+
     res.status(200).json(resume);
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Delete Resume
-exports.deleteResume = async (req, res) => {
+// 4. Save/Update Resume
+exports.saveResume = async (req, res) => {
   try {
-    const resume = await Resume.findOneAndDelete({ user: req.user.id });
-    if (!resume) return res.status(404).json({ message: "Resume not found" });
+    const { resumeId, ...resumeData } = req.body;
 
-    // Optional: Delete the image file associated with it
-    if (resume.personalInfo && resume.personalInfo.image) {
-      const fileName = resume.personalInfo.image.split("/").pop();
-      const filePath = path.join(__dirname, "../uploads/resume", fileName);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+    // Handle Image Upload if exists
+    if (req.file) {
+      // NOTE: Here you would upload to Cloudinary/S3. 
+      // For now, assuming you return a URL or path
+      const imageUrl = `/uploads/${req.file.filename}`; // Adjust based on your uploadConfig
+      
+      // Parse personalInfo string back to object to update image
+      let personalInfo = JSON.parse(resumeData.personalInfo || '{}');
+      personalInfo.image = imageUrl;
+      resumeData.personalInfo = personalInfo; // Assign back object (Mongoose handles object vs string if schema matches)
+    } else {
+      // Parse JSON strings back to objects
+      if (typeof resumeData.personalInfo === 'string') resumeData.personalInfo = JSON.parse(resumeData.personalInfo);
+    }
+    
+    // Parse other arrays
+    if (typeof resumeData.experience === 'string') resumeData.experience = JSON.parse(resumeData.experience);
+    if (typeof resumeData.education === 'string') resumeData.education = JSON.parse(resumeData.education);
+    if (typeof resumeData.projects === 'string') resumeData.projects = JSON.parse(resumeData.projects);
+    if (typeof resumeData.skills === 'string') resumeData.skills = JSON.parse(resumeData.skills);
+
+    const updatedResume = await Resume.findOneAndUpdate(
+      { _id: resumeId, user: req.user.id },
+      { $set: resumeData },
+      { new: true }
+    );
+
+    if (!updatedResume) {
+      return res.status(404).json({ success: false, message: "Resume not found" });
     }
 
-    res.status(200).json({ message: "Resume deleted successfully" });
+    res.status(200).json(updatedResume);
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    console.error(error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 5. Delete Resume
+exports.deleteResume = async (req, res) => {
+  try {
+    const deleted = await Resume.findOneAndDelete({ 
+      _id: req.params.id, 
+      user: req.user.id 
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: "Resume not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Resume deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
