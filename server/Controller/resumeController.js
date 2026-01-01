@@ -1,10 +1,49 @@
 const Resume = require("../model/ResumeModel");
+const Subscription = require("../model/SubscriptionModel"); // Ensure you import this
 
-// 1. Create a Blank Resume (Called when user clicks "Create" in Modal)
+// Helper: Check if user is allowed to create more resumes
+const checkResumeLimit = async (userId) => {
+  // 1. Count how many resumes this user ALREADY has
+  const resumeCount = await Resume.countDocuments({ user: userId });
+
+  // 2. Check for an ACTIVE subscription (Paid Plan)
+  const activeSub = await Subscription.findOne({
+    user: userId,
+    status: 'active',
+    endDate: { $gte: new Date() } // Must not be expired
+  }).populate('plan');
+
+  // 3. SET THE LIMITS
+  let limit = 2; // <--- DEFAULT FREE LIMIT IS 2
+
+  if (activeSub && activeSub.plan) {
+    limit = activeSub.plan.resumeLimit; // Use the limit from the paid plan (e.g., 10 or 20)
+  }
+
+  // 4. Return result
+  return {
+    allowed: resumeCount < limit,
+    currentCount: resumeCount,
+    maxLimit: limit
+  };
+};
+
+// --- MAIN FUNCTION ---
 exports.createResume = async (req, res) => {
   try {
+    // A. CHECK LIMIT BEFORE CREATING
+    const check = await checkResumeLimit(req.user.id);
+
+    if (!check.allowed) {
+      return res.status(403).json({
+        success: false,
+        isLimitReached: true, // <--- Flag for Frontend
+        message: `Free limit reached (${check.maxLimit} resumes). Please upgrade to create more.`
+      });
+    }
+
+    // B. If allowed, proceed to create
     const { title } = req.body;
-    
     const newResume = await Resume.create({
       user: req.user.id,
       title: title || "Untitled Resume",
@@ -20,7 +59,9 @@ exports.createResume = async (req, res) => {
       message: "Resume created successfully",
       data: newResume
     });
+
   } catch (error) {
+    console.error(error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -45,9 +86,9 @@ exports.getAllResumes = async (req, res) => {
 // 3. Get Specific Resume by ID (For the Builder Page)
 exports.getResumeById = async (req, res) => {
   try {
-    const resume = await Resume.findOne({ 
-      _id: req.params.id, 
-      user: req.user.id 
+    const resume = await Resume.findOne({
+      _id: req.params.id,
+      user: req.user.id
     });
 
     if (!resume) {
@@ -67,10 +108,10 @@ exports.saveResume = async (req, res) => {
 
     // Handle Image Upload if exists
     if (req.file) {
-      // NOTE: Here you would upload to Cloudinary/S3. 
+      // NOTE: Here you would upload to Cloudinary/S3.
       // For now, assuming you return a URL or path
       const imageUrl = `/uploads/${req.file.filename}`; // Adjust based on your uploadConfig
-      
+
       // Parse personalInfo string back to object to update image
       let personalInfo = JSON.parse(resumeData.personalInfo || '{}');
       personalInfo.image = imageUrl;
@@ -79,7 +120,7 @@ exports.saveResume = async (req, res) => {
       // Parse JSON strings back to objects
       if (typeof resumeData.personalInfo === 'string') resumeData.personalInfo = JSON.parse(resumeData.personalInfo);
     }
-    
+
     // Parse other arrays
     if (typeof resumeData.experience === 'string') resumeData.experience = JSON.parse(resumeData.experience);
     if (typeof resumeData.education === 'string') resumeData.education = JSON.parse(resumeData.education);
@@ -106,9 +147,9 @@ exports.saveResume = async (req, res) => {
 // 5. Delete Resume
 exports.deleteResume = async (req, res) => {
   try {
-    const deleted = await Resume.findOneAndDelete({ 
-      _id: req.params.id, 
-      user: req.user.id 
+    const deleted = await Resume.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.id
     });
 
     if (!deleted) {

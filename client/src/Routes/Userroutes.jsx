@@ -1,20 +1,24 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import UserDashboard from '@/userdashbaord/UserDashboard';
-import CreateResume from '@/userdashbaord/Pages/CreateResume'; // Assuming this exports the ResumeBuilder component
+import CreateResume from '@/userdashbaord/Pages/CreateResume';
+import PlanPurchase from '@/userdashbaord/Pages/PlanPurchase';
 
 const Userroutes = () => {
   return (
     <Routes>
       {/* Default redirect to dashboard */}
       <Route path="/" element={<Navigate to="dashboard" replace />} />
-      
+
       {/* /user/dashboard */}
       <Route path="dashboard" element={<UserDashboard />} />
-      
-      {/* /user/create-resume (For new) OR /user/create-resume/:id (For editing existing) */}
+
+      {/* /user/plans - New Page */}
+      <Route path="plans" element={<PlanPurchase />} />
+
+      {/* /user/create-resume */}
       <Route path="create-resume/:id?" element={<CreateResume />} />
-      
+
     </Routes>
   );
 };

@@ -46,7 +46,8 @@ const UserDashboard = () => {
 
 
   // --- Handle Create Resume (From Modal) ---
-  const handleCreateResume = async () => {
+ const handleCreateResume = async () => {
+    // 1. Validation
     if (!resumeTitle.trim()) {
       showToast("error", "Please enter a resume name");
       return;
@@ -54,20 +55,37 @@ const UserDashboard = () => {
 
     setIsCreating(true);
     try {
-      // Create a new empty resume in backend
+      // 2. Attempt to create
       const res = await axiosInstance.post("/resume/create", {
         title: resumeTitle,
         personalInfo: { fullName: user?.name || "" }
       });
 
+      // 3. Success
       if (res.data && res.data.data._id) {
         showToast("success", "Resume created!");
         setIsModalOpen(false);
-        // Navigate to builder with the new ID
         navigate(`/user/create-resume/${res.data.data._id}`);
       }
+
     } catch (error) {
       console.error("Creation error", error);
+
+      // --- 4. CHECK IF LIMIT REACHED (The Key Part) ---
+      if (error.response && error.response.status === 403 && error.response.data.isLimitReached) {
+
+        // A. Tell the user why
+        showToast("info", "Free limit (2 resumes) reached. Please upgrade!");
+
+        // B. Close the input modal
+        setIsModalOpen(false);
+
+        // C. Redirect to Plan Purchase Page
+        navigate("/user/plans");
+        return;
+      }
+      // ------------------------------------------------
+
       showToast("error", "Failed to create resume");
     } finally {
       setIsCreating(false);
