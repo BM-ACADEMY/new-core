@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, CloudUpload, FileText, Trash2, Edit, X, Loader2 } from "lucide-react";
-import Navbar from "@/Components/layout/Navbar"; 
+import Navbar from "@/Components/layout/Navbar";
 import { useAuth } from "@/Context/Authcontext";
 import axiosInstance from "@/api/axiosInstance";
 import { showToast } from "@/utils/customToast";
@@ -13,7 +13,7 @@ const UserDashboard = () => {
   // --- State Management ---
   const [savedResumes, setSavedResumes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [resumeTitle, setResumeTitle] = useState("");
@@ -24,9 +24,9 @@ const UserDashboard = () => {
     const fetchResumes = async () => {
       try {
         // NOTE: Ensure your backend has an endpoint like GET /resume/all-my-resumes
-        // If not, it might return just one object via /resume/me. 
+        // If not, it might return just one object via /resume/me.
         // This code expects an Array.
-        const res = await axiosInstance.get("/resume/all"); 
+        const res = await axiosInstance.get("/resume/all");
         if(res.data && res.data.data) {
            setSavedResumes(res.data.data); // Assuming response structure { data: [...] }
         }
@@ -40,6 +40,11 @@ const UserDashboard = () => {
     fetchResumes();
   }, []);
 
+  const handleUploadUnavailable = () => {
+  showToast("info", "currently unavailable");
+};
+
+
   // --- Handle Create Resume (From Modal) ---
   const handleCreateResume = async () => {
     if (!resumeTitle.trim()) {
@@ -50,9 +55,9 @@ const UserDashboard = () => {
     setIsCreating(true);
     try {
       // Create a new empty resume in backend
-      const res = await axiosInstance.post("/resume/create", { 
+      const res = await axiosInstance.post("/resume/create", {
         title: resumeTitle,
-        personalInfo: { fullName: user?.name || "" } 
+        personalInfo: { fullName: user?.name || "" }
       });
 
       if (res.data && res.data.data._id) {
@@ -88,7 +93,7 @@ const UserDashboard = () => {
       <Navbar />
       <div className="min-h-screen pt-32 pb-12 bg-gray-50 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
-          
+
           {/* Header */}
           <div className="mb-8 text-left">
             <h1 className="text-3xl font-bold text-gray-800">Welcome, {user?.name}</h1>
@@ -97,9 +102,9 @@ const UserDashboard = () => {
 
           {/* Top Actions: Create & Upload */}
           <div className="flex flex-wrap justify-start items-start gap-8 mt-8">
-            
+
             {/* CARD 1: Create Resume (Opens Modal) */}
-            <div 
+            <div
               onClick={() => setIsModalOpen(true)}
               className="group flex flex-col items-center justify-center w-64 h-64 p-8 bg-white rounded-3xl border-2 border-dashed border-indigo-200 cursor-pointer hover:border-indigo-500 hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1"
             >
@@ -113,8 +118,9 @@ const UserDashboard = () => {
             </div>
 
             {/* CARD 2: Upload Existing */}
-            <div 
-              onClick={() => navigate("/user/upload-resume")}
+            <div
+              // onClick={() => navigate("/user/upload-resume")}
+              onClick={handleUploadUnavailable}
               className="group flex flex-col items-center justify-center w-64 h-64 p-8 bg-white rounded-3xl border-2 border-dashed border-purple-200 cursor-pointer hover:border-purple-500 hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center shadow-lg mb-6 group-hover:scale-110 transition-transform duration-300">
@@ -140,7 +146,7 @@ const UserDashboard = () => {
             ) : savedResumes.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {savedResumes.map((resume) => (
-                  <div 
+                  <div
                     key={resume._id}
                     onClick={() => navigate(`/user/create-resume/${resume._id}`)}
                     className="relative group bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all cursor-pointer hover:border-indigo-200"
@@ -153,7 +159,7 @@ const UserDashboard = () => {
                          <FileText className="text-gray-300 w-12 h-12" />
                        )}
                     </div>
-                    
+
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-semibold text-gray-800 truncate pr-2" title={resume.title || "Untitled"}>
@@ -163,9 +169,9 @@ const UserDashboard = () => {
                           Edited: {new Date(resume.updatedAt).toLocaleDateString()}
                         </p>
                       </div>
-                      
+
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button 
+                         <button
                            onClick={(e) => handleDeleteResume(resume._id, e)}
                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
                          >
@@ -188,7 +194,7 @@ const UserDashboard = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
-            <button 
+            <button
               onClick={() => setIsModalOpen(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
             >
@@ -201,7 +207,7 @@ const UserDashboard = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Resume Name</label>
-                <input 
+                <input
                   type="text"
                   value={resumeTitle}
                   onChange={(e) => setResumeTitle(e.target.value)}
@@ -212,13 +218,13 @@ const UserDashboard = () => {
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
-                <button 
+                <button
                   onClick={() => setIsModalOpen(false)}
                   className="px-5 py-2.5 rounded-xl text-gray-600 font-medium hover:bg-gray-100 transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleCreateResume}
                   disabled={isCreating}
                   className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors disabled:opacity-70 flex items-center gap-2"
